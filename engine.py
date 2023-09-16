@@ -32,7 +32,13 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 500
 
+    cnt = 0
+
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+        if cnt > 5000:
+          break
+        cnt = cnt + 1
+
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -40,6 +46,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+
+        # print("cnt : {}".format(cnt))
 
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
@@ -68,6 +76,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(obj_error=loss_dict_reduced['obj_error'])
         metric_logger.update(rel_error=loss_dict_reduced['rel_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+
+        # if cnt > 9:
+        #   break
+        # cnt+=1
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -105,6 +117,7 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, arg
     iou_types = tuple(k for k in ('segm', 'bbox') if k in postprocessors.keys())
     coco_evaluator = CocoEvaluator(base_ds, iou_types)
 
+
     for samples, targets in metric_logger.log_every(data_loader, 100, header):
 
         samples = samples.to(device)
@@ -139,6 +152,10 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, arg
         res = {target['image_id'].item(): output for target, output in zip(targets, results)}
         if coco_evaluator is not None:
             coco_evaluator.update(res)
+        
+        # if cnt > 9:
+        #   break
+        # cnt+=1
 
     if args.dataset == 'vg':
         evaluator['sgdet'].print_stats()
