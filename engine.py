@@ -35,7 +35,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     cnt = 0
 
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
-        if cnt > 5000:
+        if cnt > 1000:
           break
         cnt = cnt + 1
 
